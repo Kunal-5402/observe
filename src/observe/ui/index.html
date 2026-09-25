@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>observe</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>observe</div>
+    <div class="seg" id="agent-filter" role="group" aria-label="Agent">
+      <button data-agent="" aria-pressed="true">All</button>
+      <button data-agent="claude" aria-pressed="false">Claude Code</button>
+      <button data-agent="codex" aria-pressed="false">Codex</button>
+    </div>
+    <div class="topbar-right">
+      <label class="live"><input type="checkbox" id="live" checked> Live</label>
+      <button id="refresh" class="btn">Refresh</button>
+    </div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <input id="filter" class="input" type="search" placeholder="Filter sessions" aria-label="Filter sessions">
+      <ul id="session-list" class="session-list"></ul>
+    </aside>
+    <main id="main" class="main">
+      <div class="empty">Loading…</div>
+    </main>
+  </div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h2 id="drawer-title">Event</h2>
+      <button id="drawer-close" class="btn" aria-label="Close">Close</button>
+    </div>
+    <div id="drawer-body" class="drawer-body"></div>
+  </aside>
+  <div id="tooltip" class="tooltip" role="tooltip"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
