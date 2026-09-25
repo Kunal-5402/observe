@@ -276,8 +276,8 @@ function renderPanel(panel) {
   else renderTable(panel, events);
 }
 
-function legend(cats) {
-  return h("div", { class: "legend" }, ...cats.map((c) => h("span", {}, swatch(c), CATS[c])));
+function legend(cats, ...items) {
+  return h("div", { class: "legend" }, ...cats.map((c) => h("span", {}, swatch(c), CATS[c])), ...items);
 }
 
 // ---------- timeline ----------
@@ -412,8 +412,7 @@ function renderTimeline(host, events) {
   }
 
   host.append(
-    legend(lanes.map((l) => l.cat)),
-    h("div", { class: "legend" },
+    legend(lanes.map((l) => l.cat),
       h("span", {}, h("span", { class: "sw", style: "background:var(--ink);border-radius:50%" }), "Prompt"),
       h("span", {}, h("span", { class: "sw", style: "background:var(--critical);border-radius:50%" }), "Error"),
       h("span", {}, h("span", { class: "sw", style: "background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--axis)" }), "Idle gap over 60s (compressed)")),
