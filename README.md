@@ -41,6 +41,9 @@ The page refreshes every 5 seconds while **Live** is on.
 
 ## How it works
 
+For more detail, read [design/architecture.md](design/architecture.md) and the call flow in
+[design/sequence.md](design/sequence.md).
+
 ```
 agent hook ──stdin JSON──> observe <agent> hook ──> raw_events (SQLite, WAL)
                                                          │  on show / sessions / ingest
