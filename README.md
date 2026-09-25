@@ -79,8 +79,11 @@ Delete `~/.observe/` to remove all recorded data.
 ## Development
 
 ```sh
-uv run --group dev pytest
-uv run observe show --no-open
+make setup     # create .venv with dev dependencies (needs uv)
+make check     # lint, format check, and tests (the same checks as CI)
+make format    # format the code
+make show      # open the UI from the dev env
+make help      # list every target
 ```
 
 Environment overrides: `OBSERVE_HOME`, `OBSERVE_CLAUDE_SETTINGS`, `CODEX_HOME`.
