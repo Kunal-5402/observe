@@ -11,12 +11,30 @@ def claude(event, **kw):
 def test_claude_session_end_to_end(conn, send):
     send("claude", claude("SessionStart", source="startup"), 100.0)
     send("claude", claude("UserPromptSubmit", prompt="fix the bug"), 101.0)
-    send("claude", claude("PreToolUse", tool_name="Read", tool_use_id="t1", tool_input={"file_path": "/repo/a.py"}), 102.0)
-    send("claude", claude("PostToolUse", tool_name="Read", tool_use_id="t1", tool_input={"file_path": "/repo/a.py"},
-                          tool_response={"file": {"content": "x"}}), 102.5)
+    send(
+        "claude",
+        claude("PreToolUse", tool_name="Read", tool_use_id="t1", tool_input={"file_path": "/repo/a.py"}),
+        102.0,
+    )
+    send(
+        "claude",
+        claude(
+            "PostToolUse",
+            tool_name="Read",
+            tool_use_id="t1",
+            tool_input={"file_path": "/repo/a.py"},
+            tool_response={"file": {"content": "x"}},
+        ),
+        102.5,
+    )
     send("claude", claude("PreToolUse", tool_name="Bash", tool_use_id="t2", tool_input={"command": "pytest"}), 103.0)
-    send("claude", claude("PostToolUseFailure", tool_name="Bash", tool_use_id="t2", tool_input={"command": "pytest"},
-                          error="1 failed"), 105.0)
+    send(
+        "claude",
+        claude(
+            "PostToolUseFailure", tool_name="Bash", tool_use_id="t2", tool_input={"command": "pytest"}, error="1 failed"
+        ),
+        105.0,
+    )
     send("claude", claude("PreToolUse", tool_name="mcp__notion__search", tool_use_id="t3", tool_input={}), 106.0)
     send("claude", claude("Stop"), 107.0)
 
@@ -54,8 +72,13 @@ def test_post_before_pre_and_missing_ids(conn, send):
 def test_hook_truncates_but_keeps_patch_headers(conn, monkeypatch):
     monkeypatch.setenv("OBSERVE_MAX_FIELD", "100")
     patch = "*** Begin Patch\n*** Update File: a.py\n" + "+x\n" * 200 + "*** Update File: b.py\n+y\n*** End Patch"
-    payload = {"session_id": "c2", "hook_event_name": "PreToolUse", "tool_name": "apply_patch",
-               "tool_use_id": "p", "tool_input": {"command": patch}}
+    payload = {
+        "session_id": "c2",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "apply_patch",
+        "tool_use_id": "p",
+        "tool_input": {"command": patch},
+    }
     hook.record("codex", json.dumps(payload).encode())
     stored = json.loads(conn.execute("SELECT payload FROM raw_events").fetchone()[0])
     assert len(stored["tool_input"]["command"]) < 300

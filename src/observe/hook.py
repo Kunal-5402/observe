@@ -52,8 +52,7 @@ def record(agent: str, raw: bytes) -> None:
     try:
         with conn:
             conn.execute(
-                "INSERT INTO raw_events(agent, hook_event, session_id, received_at, payload)"
-                " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO raw_events(agent, hook_event, session_id, received_at, payload) VALUES (?, ?, ?, ?, ?)",
                 (agent, payload.get("hook_event_name"), payload.get("session_id"), time.time(), json.dumps(payload)),
             )
     finally:

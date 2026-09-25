@@ -9,8 +9,11 @@ from urllib.parse import parse_qs, urlparse
 
 from observe import db, normalize, queries
 
-STATIC = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "text/javascript"),
-          "/style.css": ("style.css", "text/css")}
+STATIC = {
+    "/": ("index.html", "text/html"),
+    "/app.js": ("app.js", "text/javascript"),
+    "/style.css": ("style.css", "text/css"),
+}
 
 
 class Handler(BaseHTTPRequestHandler):

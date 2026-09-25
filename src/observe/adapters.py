@@ -90,7 +90,7 @@ def classify(tool_name: str | None, tool_input) -> ToolInfo:
     ti = tool_input if isinstance(tool_input, dict) else {"input": tool_input} if tool_input is not None else {}
 
     if name.startswith("mcp__"):
-        server, _, tool = name[len("mcp__"):].partition("__")
+        server, _, tool = name[len("mcp__") :].partition("__")
         return ToolInfo("mcp", f"{server}/{tool}" if tool else server)
 
     category = TOOL_CATEGORIES.get(name, "other")
@@ -160,9 +160,43 @@ SEPARATORS = set(";&|()\n")
 PREFIXES = {"sudo", "time", "env", "exec", "nohup", "command", "xargs"}
 # Shell keywords and builtins that are not programs worth counting.
 NOT_PROGRAMS = {
-    "cd", "true", "false", "echo", "printf", "export", "local", "set", "unset", "source", ".", "read", "shift",
-    "wait", "exit", "return", "if", "then", "else", "elif", "fi", "for", "while", "until", "do", "done", "case",
-    "esac", "in", "function", "select", "{", "}", "[", "[[", "]]", "!",
+    "cd",
+    "true",
+    "false",
+    "echo",
+    "printf",
+    "export",
+    "local",
+    "set",
+    "unset",
+    "source",
+    ".",
+    "read",
+    "shift",
+    "wait",
+    "exit",
+    "return",
+    "if",
+    "then",
+    "else",
+    "elif",
+    "fi",
+    "for",
+    "while",
+    "until",
+    "do",
+    "done",
+    "case",
+    "esac",
+    "in",
+    "function",
+    "select",
+    "{",
+    "}",
+    "[",
+    "[[",
+    "]]",
+    "!",
 }
 READERS = {"cat", "head", "tail", "less", "more", "nl", "bat", "wc", "sed"}
 

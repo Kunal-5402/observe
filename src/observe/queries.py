@@ -10,8 +10,14 @@ from observe.adapters import CATEGORIES, programs
 
 LEAF_CAP = 30
 HUB_LABELS = {
-    "bash": "Bash", "file_read": "Files read", "file_write": "Files changed", "search": "Search",
-    "mcp": "MCP", "web": "Web", "agent": "Subagents", "other": "Other tools",
+    "bash": "Bash",
+    "file_read": "Files read",
+    "file_write": "Files changed",
+    "search": "Search",
+    "mcp": "MCP",
+    "web": "Web",
+    "agent": "Subagents",
+    "other": "Other tools",
 }
 SESSION_COLS = (
     "id, agent, cwd, model, title, started_at, ended_at, input_tokens, output_tokens, cache_read_tokens,"
@@ -63,7 +69,8 @@ def session_detail(conn: sqlite3.Connection, session_id: str) -> dict | None:
     session = dict(row)
     cwd = session["cwd"]
     events = [
-        dict(r) for r in conn.execute(
+        dict(r)
+        for r in conn.execute(
             "SELECT id, kind, category, tool_name, target, summary, started_at, ended_at, duration_ms, status, source"
             " FROM events WHERE session_id=? ORDER BY started_at, id",
             (session_id,),
@@ -102,7 +109,9 @@ def _leaf_keys(e: dict, files_by_event: dict) -> list[tuple[str, str, str]]:
     """(node id, label, category) leaves for one tool call."""
     cat, target = e["category"], e["target"] or ""
     if cat in ("file_read", "file_write"):
-        return [(f"file:{p}", p, "file_write" if op != "read" else "file_read") for p, op in files_by_event.get(e["id"], [])]
+        return [
+            (f"file:{p}", p, "file_write" if op != "read" else "file_read") for p, op in files_by_event.get(e["id"], [])
+        ]
     if cat == "bash":
         return [(f"cmd:{p}", p, cat) for p in dict.fromkeys(programs(target))]
     if cat == "mcp":
@@ -157,7 +166,9 @@ def _graph(session: dict, events: list[dict], files: list[dict]) -> dict:
         if cat == "mcp":
             for server, tools in sorted(mcp_servers.items(), key=lambda kv: -sum(kv[1].values())):
                 sid = f"mcp-server:{server}"
-                nodes.append({"id": sid, "label": server, "type": "group", "category": cat, "count": sum(tools.values())})
+                nodes.append(
+                    {"id": sid, "label": server, "type": "group", "category": cat, "count": sum(tools.values())}
+                )
                 links.append({"source": hub, "target": sid, "count": sum(tools.values())})
                 _add_leaves(nodes, links, sid, tools, leaf_meta, cat)
             continue
@@ -182,6 +193,13 @@ def _add_leaves(nodes, links, parent, counter: Counter, meta, cat) -> None:
     rest = len(counter) - len(top)
     if rest > 0:
         more = f"more:{parent}"
-        nodes.append({"id": more, "label": f"+{rest} more", "type": "more", "category": cat,
-                      "count": sum(counter.values()) - sum(c for _, c in top)})
+        nodes.append(
+            {
+                "id": more,
+                "label": f"+{rest} more",
+                "type": "more",
+                "category": cat,
+                "count": sum(counter.values()) - sum(c for _, c in top),
+            }
+        )
         links.append({"source": parent, "target": more, "count": 1})

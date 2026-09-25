@@ -26,13 +26,31 @@ def test_codex_rollout_usage_and_web_search(conn, send, isolated):
     sid = "019e7214-0219-7d13-8120-bc515ab426d3"
     day = isolated / "codex" / "sessions" / "2026" / "05" / "29"
     day.mkdir(parents=True)
-    write_jsonl(day / f"rollout-2026-05-29T10-22-54-{sid}.jsonl", [
-        {"type": "turn_context", "payload": {"model": "gpt-5.5"}},
-        {"timestamp": "2026-05-29T04:55:28.951Z", "ordinal": 25, "type": "response_item",
-         "payload": {"type": "web_search_call", "status": "completed", "action": {"type": "search", "query": "sqlite wal"}}},
-        {"type": "event_msg", "payload": {"type": "token_count", "info": {"total_token_usage": {
-            "input_tokens": 1000, "cached_input_tokens": 600, "output_tokens": 50}}}},
-    ])
+    write_jsonl(
+        day / f"rollout-2026-05-29T10-22-54-{sid}.jsonl",
+        [
+            {"type": "turn_context", "payload": {"model": "gpt-5.5"}},
+            {
+                "timestamp": "2026-05-29T04:55:28.951Z",
+                "ordinal": 25,
+                "type": "response_item",
+                "payload": {
+                    "type": "web_search_call",
+                    "status": "completed",
+                    "action": {"type": "search", "query": "sqlite wal"},
+                },
+            },
+            {
+                "type": "event_msg",
+                "payload": {
+                    "type": "token_count",
+                    "info": {
+                        "total_token_usage": {"input_tokens": 1000, "cached_input_tokens": 600, "output_tokens": 50}
+                    },
+                },
+            },
+        ],
+    )
     # transcript_path is null, so the rollout is found by session id.
     send("codex", {"session_id": sid, "hook_event_name": "SessionStart", "cwd": "/r", "transcript_path": None}, 1.0)
     normalize.ingest(conn)

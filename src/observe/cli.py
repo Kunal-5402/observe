@@ -1,8 +1,8 @@
 """observe command line.
 
-    observe claude install|uninstall|show|sessions     (hook is called by Claude Code)
-    observe codex  install|uninstall|show|sessions     (hook is called by Codex)
-    observe show | sessions | ingest | doctor
+observe claude install|uninstall|show|sessions     (hook is called by Claude Code)
+observe codex  install|uninstall|show|sessions     (hook is called by Codex)
+observe show | sessions | ingest | doctor
 """
 
 import argparse
@@ -39,21 +39,25 @@ def build_parser() -> argparse.ArgumentParser:
         ap = sub.add_parser(agent, help=f"{AGENT_NAMES[agent]}: install hooks, show sessions")
         asub = ap.add_subparsers(dest="action", required=True, metavar="<action>")
         asub.add_parser("install", help=f"add observe hooks to {AGENT_NAMES[agent]}").set_defaults(
-            func=cmd_install, agents=[agent])
+            func=cmd_install, agents=[agent]
+        )
         asub.add_parser("uninstall", help="remove observe hooks").set_defaults(func=cmd_uninstall, agents=[agent])
         asub.add_parser("hook", help="internal: record one hook event from stdin").set_defaults(
-            func=cmd_hook, agent=agent)
+            func=cmd_hook, agent=agent
+        )
         _show_args(asub.add_parser("show", help="open the UI for this agent's sessions")).set_defaults(
-            func=cmd_show, agent=agent)
+            func=cmd_show, agent=agent
+        )
         _sessions_args(asub.add_parser("sessions", help="list recent sessions")).set_defaults(
-            func=cmd_sessions, agent=agent)
+            func=cmd_sessions, agent=agent
+        )
 
     sub.add_parser("install", help="add hooks to every detected agent").set_defaults(func=cmd_install, agents=None)
     sub.add_parser("uninstall", help="remove hooks from every agent").set_defaults(
-        func=cmd_uninstall, agents=list(AGENTS))
+        func=cmd_uninstall, agents=list(AGENTS)
+    )
     _show_args(sub.add_parser("show", help="open the UI for all sessions")).set_defaults(func=cmd_show, agent=None)
-    _sessions_args(sub.add_parser("sessions", help="list recent sessions")).set_defaults(
-        func=cmd_sessions, agent=None)
+    _sessions_args(sub.add_parser("sessions", help="list recent sessions")).set_defaults(func=cmd_sessions, agent=None)
     sub.add_parser("ingest", help="normalize pending hook events now").set_defaults(func=cmd_ingest)
     sub.add_parser("doctor", help="check hooks, database, and recent events").set_defaults(func=cmd_doctor)
     return parser
@@ -147,16 +151,20 @@ def cmd_sessions(args) -> int:
     if not rows:
         print("No sessions yet. Install hooks with `observe install`, then use your agent.")
         return 0
-    print(f"{'STARTED':<17} {'AGENT':<7} {'ID':<9} {'PROJECT':<18} {'TIME':>7} {'TOOLS':>5} {'ERR':>4} "
-          f"{'TOKENS':>7}  TITLE")
+    print(
+        f"{'STARTED':<17} {'AGENT':<7} {'ID':<9} {'PROJECT':<18} {'TIME':>7} {'TOOLS':>5} {'ERR':>4} "
+        f"{'TOKENS':>7}  TITLE"
+    )
     for s in rows:
         started = time.strftime("%Y-%m-%d %H:%M", time.localtime(s["started_at"])) if s["started_at"] else "-"
         project = os.path.basename(s["cwd"] or "") or "-"
         tokens = s["input_tokens"] + s["output_tokens"] + s["cache_read_tokens"] + s["cache_write_tokens"]
         title = (s["title"] or "").replace("\n", " ")[:50]
-        print(f"{started:<17} {s['agent']:<7} {s['id'][:8]:<9} {project[:18]:<18} "
-              f"{_fmt_dur((s['ended_at'] or 0) - (s['started_at'] or 0)):>7} {s['tool_call_count']:>5} "
-              f"{s['error_count']:>4} {_fmt_num(tokens):>7}  {title}")
+        print(
+            f"{started:<17} {s['agent']:<7} {s['id'][:8]:<9} {project[:18]:<18} "
+            f"{_fmt_dur((s['ended_at'] or 0) - (s['started_at'] or 0)):>7} {s['tool_call_count']:>5} "
+            f"{s['error_count']:>4} {_fmt_num(tokens):>7}  {title}"
+        )
     return 0
 
 

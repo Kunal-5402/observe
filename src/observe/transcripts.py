@@ -70,13 +70,15 @@ def parse_codex(path: str) -> dict:
             action = payload.get("action") or {}
             ts = _ts(obj.get("timestamp"))
             if ts is not None:
-                searches.append({
-                    "tool_use_id": f"codex-ws-{obj.get('ordinal', n)}",
-                    "started_at": ts,
-                    "target": action.get("query") or action.get("url"),
-                    "status": "ok" if payload.get("status") in (None, "completed") else "error",
-                    "detail": {"input": action},
-                })
+                searches.append(
+                    {
+                        "tool_use_id": f"codex-ws-{obj.get('ordinal', n)}",
+                        "started_at": ts,
+                        "target": action.get("query") or action.get("url"),
+                        "status": "ok" if payload.get("status") in (None, "completed") else "error",
+                        "detail": {"input": action},
+                    }
+                )
     total = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0}
     if last_usage:
         cached = last_usage.get("cached_input_tokens") or 0
@@ -118,16 +120,33 @@ def refresh(conn: sqlite3.Connection) -> set[str]:
             conn.execute(
                 "UPDATE sessions SET input_tokens=?, output_tokens=?, cache_read_tokens=?, cache_write_tokens=?,"
                 " model=COALESCE(?, model), transcript_path=?, transcript_mtime=? WHERE id=?",
-                (u["input_tokens"], u["output_tokens"], u["cache_read_tokens"], u["cache_write_tokens"],
-                 parsed["model"], path, mtime, s["id"]),
+                (
+                    u["input_tokens"],
+                    u["output_tokens"],
+                    u["cache_read_tokens"],
+                    u["cache_write_tokens"],
+                    parsed["model"],
+                    path,
+                    mtime,
+                    s["id"],
+                ),
             )
             for e in parsed["extra_events"]:
                 conn.execute(
                     "INSERT OR IGNORE INTO events(session_id, agent, kind, category, tool_name, tool_use_id,"
                     " started_at, ended_at, duration_ms, status, target, summary, detail, source)"
                     " VALUES (?, ?, 'tool_call', 'web', 'web_search', ?, ?, ?, 0, ?, ?, ?, ?, 'transcript')",
-                    (s["id"], s["agent"], e["tool_use_id"], e["started_at"], e["started_at"], e["status"],
-                     e["target"], f"web_search: {e['target']}", json.dumps(e["detail"])),
+                    (
+                        s["id"],
+                        s["agent"],
+                        e["tool_use_id"],
+                        e["started_at"],
+                        e["started_at"],
+                        e["status"],
+                        e["target"],
+                        f"web_search: {e['target']}",
+                        json.dumps(e["detail"]),
+                    ),
                 )
         changed.add(s["id"])
     return changed

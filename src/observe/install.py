@@ -20,12 +20,30 @@ from observe import paths
 
 EVENTS = {
     "claude": [
-        "SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse",
-        "PostToolUseFailure", "Stop", "SubagentStart", "SubagentStop", "PreCompact", "Notification",
+        "SessionStart",
+        "SessionEnd",
+        "UserPromptSubmit",
+        "PreToolUse",
+        "PostToolUse",
+        "PostToolUseFailure",
+        "Stop",
+        "SubagentStart",
+        "SubagentStop",
+        "PreCompact",
+        "Notification",
     ],
     "codex": [
-        "SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop",
-        "SubagentStart", "SubagentStop", "PreCompact", "PostCompact", "Interrupt",
+        "SessionStart",
+        "SessionEnd",
+        "UserPromptSubmit",
+        "PreToolUse",
+        "PostToolUse",
+        "Stop",
+        "SubagentStart",
+        "SubagentStop",
+        "PreCompact",
+        "PostCompact",
+        "Interrupt",
     ],
 }
 TOOL_EVENTS = {"PreToolUse", "PostToolUse", "PostToolUseFailure"}
@@ -104,7 +122,8 @@ def installed_events(agent: str) -> list[str]:
     except (OSError, ValueError):
         return []
     return [
-        event for event, groups in hooks.items()
+        event
+        for event, groups in hooks.items()
         if any(MARKER.search(str(h.get("command", ""))) for g in groups for h in g.get("hooks", []))
     ]
 

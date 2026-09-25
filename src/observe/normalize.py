@@ -32,9 +32,7 @@ def ingest(conn: sqlite3.Connection) -> int:
     total = 0
     touched: set[str] = set()
     while True:
-        rows = conn.execute(
-            "SELECT * FROM raw_events WHERE processed=0 ORDER BY id LIMIT ?", (BATCH,)
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM raw_events WHERE processed=0 ORDER BY id LIMIT ?", (BATCH,)).fetchall()
         if not rows:
             break
         with conn:
@@ -153,8 +151,17 @@ def _tool_start(conn, sid, agent, p, ts) -> None:
         "INSERT OR IGNORE INTO events(session_id, agent, kind, category, tool_name, tool_use_id,"
         " started_at, status, target, summary, detail)"
         " VALUES (?, ?, 'tool_call', ?, ?, ?, ?, 'running', ?, ?, ?)",
-        (sid, agent, info.category, name, tuid, ts, info.target, _summary(name, info.target),
-         json.dumps(_tool_detail(p))),
+        (
+            sid,
+            agent,
+            info.category,
+            name,
+            tuid,
+            ts,
+            info.target,
+            _summary(name, info.target),
+            json.dumps(_tool_detail(p)),
+        ),
     )
     if cur.rowcount == 0:  # The Post row arrived first.
         conn.execute(
@@ -198,8 +205,19 @@ def _tool_end(conn, sid, agent, p, ts, event) -> None:
         "INSERT INTO events(session_id, agent, kind, category, tool_name, tool_use_id, started_at,"
         " ended_at, duration_ms, status, target, summary, detail)"
         " VALUES (?, ?, 'tool_call', ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
-        (sid, agent, info.category, name, tuid, ts, ts, status, info.target, _summary(name, info.target),
-         json.dumps(detail)),
+        (
+            sid,
+            agent,
+            info.category,
+            name,
+            tuid,
+            ts,
+            ts,
+            status,
+            info.target,
+            _summary(name, info.target),
+            json.dumps(detail),
+        ),
     )
     _set_files(conn, cur.lastrowid, sid, info.files)
 
