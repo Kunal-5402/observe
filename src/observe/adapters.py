@@ -44,7 +44,17 @@ TOOL_CATEGORIES = {
     "wait_agent": "agent",
     "send_input": "agent",
     "close_agent": "agent",
+    # Cursor (hook names and internal tool names)
+    "Shell": "bash",
+    "ReadFile": "file_read",
+    "EditFile": "file_write",
+    "StrReplace": "file_write",
+    "Delete": "file_write",
+    "DeleteFile": "file_write",
+    "GlobFileSearch": "search",
+    "ListDir": "search",
 }
+DELETE_TOOLS = {"Delete", "DeleteFile"}
 
 PATCH_LINE = re.compile(r"^\*\*\* (Add File|Update File|Delete File|Move to): (.+?)\s*$", re.M)
 PATCH_OPS = {"Add File": "write", "Update File": "write", "Move to": "write", "Delete File": "delete"}
@@ -89,6 +99,9 @@ def classify(tool_name: str | None, tool_input) -> ToolInfo:
     name = tool_name or "unknown"
     ti = tool_input if isinstance(tool_input, dict) else {"input": tool_input} if tool_input is not None else {}
 
+    if name.startswith("MCP:"):  # Cursor
+        return ToolInfo("mcp", name[len("MCP:") :])
+
     if name.startswith("mcp__"):
         server, _, tool = name[len("mcp__") :].partition("__")
         return ToolInfo("mcp", f"{server}/{tool}" if tool else server)
@@ -106,8 +119,8 @@ def classify(tool_name: str | None, tool_input) -> ToolInfo:
             return ToolInfo(category, files[0][0] if len(files) == 1 else f"{len(files)} files", files)
 
     if category in ("file_read", "file_write"):
-        path = ti.get("file_path") or ti.get("notebook_path") or ti.get("path")
-        op = "read" if category == "file_read" else "write"
+        path = ti.get("file_path") or ti.get("notebook_path") or ti.get("path") or ti.get("target_file")
+        op = "read" if category == "file_read" else "delete" if name in DELETE_TOOLS else "write"
         return ToolInfo(category, path, [(path, op)] if path else [])
 
     if category == "search":

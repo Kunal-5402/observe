@@ -2,7 +2,7 @@
 
 `observe` shows you what your coding agent did during a session: which tools it called, which
 commands it ran, which files it read and changed, which MCP servers it used, and how many tokens
-it spent. It works with Claude Code and Codex. All data stays on your machine.
+it spent. It works with Claude Code, Codex, and Cursor. All data stays on your machine.
 
 For the step-by-step call flow, see [sequence.md](sequence.md).
 
@@ -65,15 +65,27 @@ color everywhere.
 
 **The hook must be fast and silent.** The agent waits for the hook before it continues, so a slow
 hook makes the agent slow. The hook does no parsing: it inserts 1 row and exits in about 30 ms.
-It never writes to stdout, because both agents read hook stdout as instructions. It never fails
-the agent: errors go to `~/.observe/errors.log`, and the exit code is always 0.
+For Claude Code and Codex it never writes to stdout, because they read hook stdout as
+instructions. It never fails the agent: errors go to `~/.observe/errors.log`, and the exit code
+is always 0.
+
+**Cursor gets a reply that changes nothing.** Cursor reads hook stdout as JSON on every event,
+and for some events empty output can block the action. So for Cursor the hook always prints `{}`,
+or `{"continue": true}` for a prompt. It prints this reply even when the database write fails.
+
+**Cursor hooks only observe.** Some Cursor hooks decide if an action may run (`preToolUse`,
+`beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile`, `subagentStart`). If `observe`
+answered "allow" there, it could skip a question that Cursor would normally ask you. So `observe`
+subscribes only to events that report what happened. `postToolUse` carries the duration of the
+call, so `observe` can calculate when the call started.
 
 **Normalization is lazy.** Parsing happens only when you look at the data. This keeps the hook
 small, and lets us fix a parsing bug and re-process old events without a new capture.
 
-**One schema for both agents.** Claude Code and Codex send the same hook payload shape
-(`session_id`, `tool_name`, `tool_input`, `tool_response`, `tool_use_id`). Only the tool names
-are different. `adapters.py` holds these differences, so the rest of the code and the UI do not
+**One schema for all agents.** The agents send a similar hook payload shape (`tool_name`,
+`tool_input`, `tool_use_id`). The differences are small: Cursor names the session
+`conversation_id`, uses camelCase event names (`postToolUse`), and calls the result
+`tool_output`. `adapters.py` holds these differences, so the rest of the code and the UI do not
 need to know which agent made an event.
 
 **Tokens come from transcripts.** Hook payloads have no token counts. Each agent writes its own
@@ -93,19 +105,25 @@ with no events become thin breaks.
 
 ## Differences between the agents
 
-| Topic | Claude Code | Codex |
-|-------|-------------|-------|
-| Config file | `~/.claude/settings.json` | `~/.codex/hooks.json` |
-| File reads | `Read` tool | Shell commands. We detect `cat`, `head`, `tail`, `sed -n`, `nl`, and others. |
-| File writes | `Edit`, `Write`, `MultiEdit` | `apply_patch`. We read file names from the patch. |
-| Failed tool calls | `PostToolUseFailure` event | No failure flag. We read the exit code from the output. |
-| Web search | `WebSearch` tool fires hooks | Hosted search fires no hook. We read it from the rollout file. |
-| Transcript | `transcript_path` in the payload | Rollout file in `~/.codex/sessions/`, found by session id |
+| Topic | Claude Code | Codex | Cursor |
+|-------|-------------|-------|--------|
+| Config file | `~/.claude/settings.json` | `~/.codex/hooks.json` | `~/.cursor/hooks.json` |
+| Session id | `session_id` | `session_id` | `conversation_id` |
+| Tool call events | Pre and Post | Pre and Post | Post only, with `duration` |
+| Hook stdout | must be empty | must be empty | must be JSON |
+| File reads | `Read` tool | Shell commands. We detect `cat`, `head`, `sed -n`, and others. | `Read` tool |
+| File writes | `Edit`, `Write`, `MultiEdit` | `apply_patch`. We read file names from the patch. | `Write`, `Delete` |
+| MCP tool name | `mcp__server__tool` | `mcp__server__tool` | `MCP:tool` |
+| Failed tool calls | `PostToolUseFailure` event | No failure flag. We read the exit code. | `postToolUseFailure` event |
+| Web search | `WebSearch` tool fires hooks | No hook. We read it from the rollout file. | Tool event |
+| Tokens | Transcript `message.usage` | Rollout `token_count` events | Not available |
 
 ## How to add a new agent
 
 1. Add the agent name to `AGENTS` in `__init__.py`.
 2. Add its config file path to `paths.py`, and its hook events to `EVENTS` in `install.py`.
+   Subscribe only to events that report, never to events that decide.
+   If its event names differ, map them in `EVENT_ALIASES` in `normalize.py`.
 3. Add its tool names to `TOOL_CATEGORIES` in `adapters.py`.
 4. If it writes a transcript, add a parser to `transcripts.py`.
 5. Record real payloads from the agent and add them as tests.

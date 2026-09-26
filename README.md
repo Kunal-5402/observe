@@ -1,7 +1,7 @@
 # observe
 
-Local telemetry for coding agents. `observe` installs hooks into **Claude Code** and **Codex**,
-records every tool call in a local SQLite database, and shows each session as a timeline and a
+Local telemetry for coding agents. `observe` installs hooks into **Claude Code**, **Codex**, and
+**Cursor**, records every tool call in a local SQLite database, and shows each session as a timeline and a
 graph in your browser. Nothing leaves your machine.
 
 What you can see for each session:
@@ -11,7 +11,7 @@ What you can see for each session:
 - the files that the agent read and changed (Codex `apply_patch` included)
 - the MCP servers and tools that the agent called
 - subagents, prompts, context compactions, and interrupts
-- token usage and model, read from the agent's own transcript
+- token usage and model, read from the agent's own transcript (Claude Code and Codex)
 
 ## Install
 
@@ -21,6 +21,7 @@ observe install            # adds hooks to every agent it finds
 # or one agent at a time:
 observe claude install
 observe codex install
+observe cursor install
 ```
 
 Start a new agent session after install. Hooks load when a session starts.
@@ -31,6 +32,7 @@ Start a new agent session after install. Hooks load when a session starts.
 observe show               # open the UI for all sessions
 observe claude show        # only Claude Code sessions
 observe codex show [id]    # only Codex sessions, optionally open one session
+observe cursor show        # only Cursor sessions
 observe sessions           # list recent sessions in the terminal
 observe doctor             # check hooks, database, and recent events
 observe uninstall          # remove the hooks (other hooks stay)
@@ -52,10 +54,14 @@ observe show ──> 127.0.0.1 server ──> static UI + JSON API
 ```
 
 - **The hook is fast and silent.** It reads the payload, trims long strings, inserts one row,
-  and exits 0. It never prints to stdout, because both agents read hook stdout as instructions.
-  Failures go to `~/.observe/errors.log`, never to the agent.
-- **Normalization is lazy.** Claude Code and Codex send the same payload shape, with different
-  tool names. `adapters.py` maps each tool to one of these categories:
+  and exits 0. For Claude Code and Codex it prints nothing, because they read hook stdout as
+  instructions. Cursor needs JSON on stdout, so the hook answers `{}` (or `{"continue": true}`
+  for a prompt), which changes nothing. Failures go to `~/.observe/errors.log`, never to the agent.
+- **Cursor: observe only.** Cursor lets some hooks (`preToolUse`, `beforeShellExecution`,
+  `beforeReadFile`) allow or block an action. `observe` never subscribes to them. It uses
+  `postToolUse`, which carries the call duration, to place each call on the timeline.
+- **Normalization is lazy.** The 3 agents send a similar payload shape, with different tool
+  names and event names. `adapters.py` maps each tool to one of these categories:
   `bash`, `file_read`, `file_write`, `search`, `mcp`, `web`, `agent`, `other`.
   Pre and post events are paired by `tool_use_id`.
 - **Tokens come from transcripts.** Hooks carry no token data. `observe` reads the Claude Code
@@ -68,12 +74,14 @@ Config files that `observe` changes (it writes a timestamped backup first):
 |-------------|---------------------------|
 | Claude Code | `~/.claude/settings.json` |
 | Codex       | `~/.codex/hooks.json`     |
+| Cursor      | `~/.cursor/hooks.json`    |
 
 ## Privacy
 
 All data stays in `~/.observe/observe.db`. Each string field is trimmed to 4096 characters
 before it is stored, so large file contents and command output are not kept. Set
 `OBSERVE_MAX_FIELD` in your shell to change the limit (`0` keeps everything).
+Cursor sends your account email with each event; `observe` removes it before it stores the event.
 Delete `~/.observe/` to remove all recorded data.
 
 ## Development
@@ -86,4 +94,4 @@ make show      # open the UI from the dev env
 make help      # list every target
 ```
 
-Environment overrides: `OBSERVE_HOME`, `OBSERVE_CLAUDE_SETTINGS`, `CODEX_HOME`.
+Environment overrides: `OBSERVE_HOME`, `OBSERVE_CLAUDE_SETTINGS`, `CODEX_HOME`, `OBSERVE_CURSOR_HOME`.

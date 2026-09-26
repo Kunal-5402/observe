@@ -12,7 +12,7 @@ const CATS = {
   other: "Other",
 };
 const ORDER = Object.keys(CATS);
-const AGENT_NAMES = { claude: "Claude Code", codex: "Codex" };
+const AGENT_NAMES = { claude: "Claude Code", codex: "Codex", cursor: "Cursor" };
 const STATUS = {
   ok: ["✓", "OK"],
   error: ["!", "Error"],

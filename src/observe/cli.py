@@ -2,6 +2,7 @@
 
 observe claude install|uninstall|show|sessions     (hook is called by Claude Code)
 observe codex  install|uninstall|show|sessions     (hook is called by Codex)
+observe cursor install|uninstall|show|sessions     (hook is called by Cursor)
 observe show | sessions | ingest | doctor
 """
 
@@ -14,7 +15,7 @@ import webbrowser
 
 from observe import AGENTS, __version__
 
-AGENT_NAMES = {"claude": "Claude Code", "codex": "Codex"}
+AGENT_NAMES = {"claude": "Claude Code", "codex": "Codex", "cursor": "Cursor"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -80,6 +81,8 @@ def _detected(agent: str) -> bool:
 
     if agent == "claude":
         return bool(shutil.which("claude")) or paths.claude_settings().parent.is_dir()
+    if agent == "cursor":
+        return bool(shutil.which("cursor")) or paths.cursor_home().is_dir()
     return bool(shutil.which("codex")) or paths.codex_home().is_dir()
 
 
@@ -88,7 +91,7 @@ def cmd_install(args) -> int:
 
     agents = args.agents or [a for a in AGENTS if _detected(a)]
     if not agents:
-        print("No agent found. Run `observe claude install` or `observe codex install`.")
+        print("No agent found. Run `observe <claude|codex|cursor> install`.")
         return 1
     for agent in agents:
         try:

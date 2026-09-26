@@ -11,6 +11,7 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setenv("OBSERVE_HOME", str(tmp_path / "observe"))
     monkeypatch.setenv("OBSERVE_CLAUDE_SETTINGS", str(tmp_path / "claude" / "settings.json"))
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex"))
+    monkeypatch.setenv("OBSERVE_CURSOR_HOME", str(tmp_path / "cursor"))
     return tmp_path
 
 
