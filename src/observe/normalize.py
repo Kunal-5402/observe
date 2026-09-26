@@ -10,8 +10,23 @@ import traceback
 
 from observe import paths, transcripts
 from observe.adapters import classify, excerpt, response_status
+from observe.hook import session_key
 
 BATCH = 2000
+
+# Cursor uses camelCase event names. Map them to the names that Claude Code and Codex use.
+EVENT_ALIASES = {
+    "sessionStart": "SessionStart",
+    "sessionEnd": "SessionEnd",
+    "beforeSubmitPrompt": "UserPromptSubmit",
+    "preToolUse": "PreToolUse",
+    "postToolUse": "PostToolUse",
+    "postToolUseFailure": "PostToolUseFailure",
+    "subagentStart": "SubagentStart",
+    "subagentStop": "SubagentStop",
+    "preCompact": "PreCompact",
+    "stop": "Stop",
+}
 
 POINT_EVENTS = {
     "SessionStart": "session_start",
@@ -58,11 +73,12 @@ def _log(raw_id: int) -> None:
 
 def _apply(conn: sqlite3.Connection, row: sqlite3.Row, touched: set[str]) -> None:
     p = json.loads(row["payload"])
-    sid = p.get("session_id") or row["session_id"]
+    sid = session_key(p) or row["session_id"]
     if not sid:
         return
     agent, ts = row["agent"], row["received_at"]
     event = row["hook_event"] or p.get("hook_event_name") or "unknown"
+    event = EVENT_ALIASES.get(event, event)
     _upsert_session(conn, sid, agent, p, ts)
     touched.add(sid)
 
@@ -80,7 +96,7 @@ def _apply(conn: sqlite3.Connection, row: sqlite3.Row, touched: set[str]) -> Non
 
 def _point_summary(event: str, p: dict) -> str:
     if event == "SessionStart":
-        return f"Session started ({p.get('source') or 'startup'})"
+        return f"Session started ({p.get('source') or p.get('composer_mode') or 'startup'})"
     if event == "SessionEnd":
         return f"Session ended ({p.get('reason') or 'exit'})"
     if event in ("SubagentStart", "SubagentStop"):
@@ -98,7 +114,18 @@ def _point_summary(event: str, p: dict) -> str:
 
 
 def _point_detail(p: dict) -> dict:
-    skip = {"session_id", "transcript_path", "cwd", "hook_event_name", "permission_mode"}
+    skip = {
+        "session_id",
+        "transcript_path",
+        "cwd",
+        "hook_event_name",
+        "permission_mode",
+        "conversation_id",
+        "generation_id",
+        "workspace_roots",
+        "cursor_version",
+        "model_params",
+    }
     return {k: v for k, v in p.items() if k not in skip}
 
 
@@ -112,8 +139,13 @@ def _upsert_session(conn, sid, agent, p, ts) -> None:
         "  model=COALESCE(excluded.model, model),"
         "  started_at=MIN(started_at, excluded.started_at),"
         "  ended_at=MAX(ended_at, excluded.ended_at)",
-        (sid, agent, p.get("cwd"), p.get("transcript_path"), p.get("model"), ts, ts),
+        (sid, agent, _cwd(p), p.get("transcript_path"), p.get("model"), ts, ts),
     )
+
+
+def _cwd(p: dict) -> str | None:
+    roots = p.get("workspace_roots")
+    return p.get("cwd") or (roots[0] if isinstance(roots, list) and roots else None)
 
 
 def _point(conn, sid, agent, kind, ts, summary, detail) -> None:
@@ -175,8 +207,9 @@ def _tool_start(conn, sid, agent, p, ts) -> None:
 
 def _tool_end(conn, sid, agent, p, ts, event) -> None:
     name, tuid = p.get("tool_name"), p.get("tool_use_id")
-    response = p.get("tool_response", p.get("error"))
-    status = response_status(response, event)
+    error = p.get("error") or p.get("error_message")
+    response = next((p[k] for k in ("tool_response", "tool_output") if k in p), error)
+    status = "interrupted" if p.get("is_interrupt") else response_status(response, event)
     if tuid:
         row = conn.execute(
             "SELECT id, started_at, detail FROM events WHERE session_id=? AND tool_use_id=?", (sid, tuid)
@@ -191,8 +224,8 @@ def _tool_end(conn, sid, agent, p, ts, event) -> None:
     if row:
         detail = json.loads(row["detail"] or "{}")
         detail["response"] = excerpt(response)
-        if p.get("error"):
-            detail["error"] = p["error"]
+        if error:
+            detail["error"] = error
         conn.execute(
             "UPDATE events SET ended_at=?, duration_ms=?, status=?, detail=? WHERE id=?",
             (ts, int((ts - row["started_at"]) * 1000), status, json.dumps(detail), row["id"]),
@@ -201,18 +234,23 @@ def _tool_end(conn, sid, agent, p, ts, event) -> None:
 
     info = classify(name, p.get("tool_input"))
     detail = _tool_detail(p) | {"response": excerpt(response)}
+    # No Pre event: Cursor sends only postToolUse, with the duration in milliseconds.
+    duration = p.get("duration") if isinstance(p.get("duration"), (int, float)) else 0
+    if error:
+        detail["error"] = error
     cur = conn.execute(
         "INSERT INTO events(session_id, agent, kind, category, tool_name, tool_use_id, started_at,"
         " ended_at, duration_ms, status, target, summary, detail)"
-        " VALUES (?, ?, 'tool_call', ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)",
+        " VALUES (?, ?, 'tool_call', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             sid,
             agent,
             info.category,
             name,
             tuid,
+            ts - duration / 1000,
             ts,
-            ts,
+            int(duration),
             status,
             info.target,
             _summary(name, info.target),

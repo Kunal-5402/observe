@@ -30,3 +30,11 @@ def codex_hooks() -> Path:
 
 def codex_sessions() -> Path:
     return codex_home() / "sessions"
+
+
+def cursor_home() -> Path:
+    return Path(os.environ.get("OBSERVE_CURSOR_HOME") or Path.home() / ".cursor")
+
+
+def cursor_hooks() -> Path:
+    return cursor_home() / "hooks.json"

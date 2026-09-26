@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib import resources
 from urllib.parse import parse_qs, urlparse
 
-from observe import db, normalize, queries
+from observe import AGENTS, db, normalize, queries
 
 STATIC = {
     "/": ("index.html", "text/html"),
@@ -33,7 +33,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/sessions":
                 normalize.ingest(conn)
                 agent = parse_qs(url.query).get("agent", [None])[0]
-                return self._json(queries.list_sessions(conn, agent if agent in ("claude", "codex") else None))
+                return self._json(queries.list_sessions(conn, agent if agent in AGENTS else None))
             if m := re.fullmatch(r"/api/sessions/([\w.-]+)", url.path):
                 data = queries.session_detail(conn, m.group(1))
                 return self._json(data) if data else self._error(HTTPStatus.NOT_FOUND)

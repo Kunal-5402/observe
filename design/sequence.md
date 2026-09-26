@@ -9,7 +9,7 @@ sequenceDiagram
     actor User
     participant CLI as observe CLI
     participant Config as Agent config file
-    participant Agent as Claude Code or Codex
+    participant Agent as Claude Code, Codex, or Cursor
     participant Hook as observe hook
     participant DB as SQLite database
     participant Transcript as Agent transcript
@@ -25,7 +25,7 @@ sequenceDiagram
     User->>Agent: start a session and send a prompt
     Agent->>Hook: UserPromptSubmit event as JSON on stdin
     Hook->>DB: insert 1 row into raw_events
-    Hook-->>Agent: exit 0, no stdout
+    Hook-->>Agent: exit 0, no stdout (Cursor gets a no-op JSON reply)
     loop every tool call
         Agent->>Hook: PreToolUse event
         Hook->>DB: insert raw row
@@ -68,7 +68,9 @@ sequenceDiagram
 - **Steps 1 to 3.** `observe install` adds 1 hook entry for each event to the agent config
   file. The command in each entry is `python -m observe <agent> hook`.
 - **Steps 4 to 15.** The agent calls the hook for each event. The hook only saves the raw JSON.
-  It does not parse it, so the agent does not slow down.
+  It does not parse it, so the agent does not slow down. Cursor sends no Pre event: it sends only
+  the Post event, with the call duration. Cursor transcripts have no token usage, so for Cursor
+  steps 13 and 20 add no token counts.
 - **Steps 16 to 23.** `observe show` turns the raw rows into sessions, events, and files. Token
   counts come from the agent transcript, because hook events do not contain them.
 - **Steps 24 to 34.** The browser gets JSON from the local server. Each request to the session

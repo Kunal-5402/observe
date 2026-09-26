@@ -114,7 +114,10 @@ def refresh(conn: sqlite3.Connection) -> set[str]:
             continue
         if s["transcript_mtime"] == mtime:
             continue
-        parsed = parse_claude(path) if s["agent"] == "claude" else parse_codex(path)
+        parser = {"claude": parse_claude, "codex": parse_codex}.get(s["agent"])
+        if not parser:  # Cursor transcripts have no token usage.
+            continue
+        parsed = parser(path)
         u = parsed["usage"]
         with conn:
             conn.execute(

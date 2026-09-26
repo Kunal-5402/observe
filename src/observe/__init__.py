@@ -2,4 +2,4 @@
 
 __version__ = "0.1.0"
 
-AGENTS = ("claude", "codex")
+AGENTS = ("claude", "codex", "cursor")
